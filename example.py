@@ -4,13 +4,13 @@ from transformers import AutoTokenizer
 
 
 def main():
-    model = "./Qwen3-0.6B/"
+    model = "./models/Qwen3-0.6B/"
     tokenizer = AutoTokenizer.from_pretrained(model)
     llm = LLM(
         model=model,
         max_model_len=8192,
         enforce_eager=False,
-        tensor_parallel_size=2,
+        tensor_parallel_size=1,
         kvcache_block_size=256, # must be divisible by 256
     )
 
