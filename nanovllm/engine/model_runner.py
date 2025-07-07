@@ -73,7 +73,7 @@ class ModelRunner:
         self.event.clear()
         return method_name, args
 
-    def write_shm(self, method_name, *args):
+    def write_shm(self, method_name: str, *args):
         assert self.world_size > 1 and not self.rank
         data = pickle.dumps([method_name, *args])
         n = len(data)
@@ -82,7 +82,7 @@ class ModelRunner:
         for event in self.event:
             event.set()
 
-    def call(self, method_name, *args):
+    def call(self, method_name: str, *args):
         if self.world_size > 1 and self.rank == 0:
             self.write_shm(method_name, *args)
         method = getattr(self, method_name, None)
