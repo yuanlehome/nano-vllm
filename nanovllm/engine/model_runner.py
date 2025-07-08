@@ -122,7 +122,7 @@ class ModelRunner:
         block_tables = torch.tensor(block_tables, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
         return block_tables
 
-    def prepare_prefill(self, seqs: list[Sequence]):
+    def prepare_prefill(self, seqs: list[Sequence]) -> tuple[torch.Tensor, torch.Tensor]:
         input_ids = []
         positions = []
         cu_seqlens_q = [0]
@@ -178,7 +178,7 @@ class ModelRunner:
         set_context(False, slot_mapping=slot_mapping, context_lens=context_lens, block_tables=block_tables)
         return input_ids, positions
 
-    def prepare_sample(self, seqs: list[Sequence]):
+    def prepare_sample(self, seqs: list[Sequence]) -> list[torch.Tensor]:
         temperatures = []
         for seq in seqs:
             temperatures.append(seq.temperature)

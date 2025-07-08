@@ -15,7 +15,7 @@ class Scheduler:
         self.waiting: deque[Sequence] = deque()
         self.running: deque[Sequence] = deque()
 
-    def is_finished(self):
+    def is_finished(self) -> bool:
         return not self.waiting and not self.running
 
     def add(self, seq: Sequence):
@@ -62,7 +62,7 @@ class Scheduler:
         self.block_manager.deallocate(seq)
         self.waiting.appendleft(seq)
 
-    def postprocess(self, seqs: list[Sequence], token_ids: list[int]) -> list[bool]:
+    def postprocess(self, seqs: list[Sequence], token_ids: list[int]):
         assert len(seqs) == len(token_ids)
         for seq, token_id in zip(seqs, token_ids):
             seq.append_token(token_id)

@@ -47,7 +47,7 @@ class BlockManager:
         block.reset()
         self.free_block_ids.remove(block_id)
         self.used_block_ids.add(block_id)
-        return self.blocks[block_id]
+        return block
 
     def _deallocate_block(self, block_id: int) -> Block:
         assert self.blocks[block_id].ref_count == 0
@@ -92,7 +92,8 @@ class BlockManager:
         seq.block_table.clear()
 
     def can_append(self, seq: Sequence) -> bool:
-        return len(self.free_block_ids) >= (len(seq) % self.block_size == 1)
+        need_new_block = (len(seq) % self.block_size) == 1
+        return len(self.free_block_ids) >= (1 if need_new_block else 0)
 
     def may_append(self, seq: Sequence):
         block_table = seq.block_table
