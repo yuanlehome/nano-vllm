@@ -1,0 +1,24 @@
+default_stages:
+  - pre-commit
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4  # 请根据实际需要选择 ruff 版本
+    hooks:
+      - id: ruff
+        args: [--fix, --output-format=full, --line-length=120]
+        additional_dependencies: ["ruff==0.4.4"]
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 6.0.1
+    hooks:
+        - id: isort
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+      - id: detect-private-key
