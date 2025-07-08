@@ -1,6 +1,7 @@
 import pickle
 from multiprocessing.shared_memory import SharedMemory
 from multiprocessing.synchronize import Event
+from typing import Any
 
 import torch
 import torch.distributed as dist
@@ -8,9 +9,8 @@ import torch.distributed as dist
 from nanovllm.config import Config
 from nanovllm.engine.sequence import Sequence
 from nanovllm.layers.sampler import Sampler
-from nanovllm.models.qwen3 import Qwen3ForCausalLM
 from nanovllm.utils.context import get_context, reset_context, set_context
-from nanovllm.utils.loader import load_model
+from nanovllm.utils.loader import get_model_from_loader
 
 
 class ModelRunner:
@@ -23,21 +23,18 @@ class ModelRunner:
         self.world_size = config.tensor_parallel_size
         self.rank = rank
         self.event = event
+        self.sampler = Sampler()
 
         dist.init_process_group("nccl", "tcp://localhost:2333", world_size=self.world_size, rank=rank)
         torch.cuda.set_device(rank)
-        default_dtype = torch.get_default_dtype()
         torch.set_default_dtype(hf_config.torch_dtype)
         torch.set_default_device("cuda")
-        self.model = Qwen3ForCausalLM(hf_config)
-        load_model(self.model, config.model)
-        self.sampler = Sampler()
+        self.model = get_model_from_loader(self.config)
+
         self.warmup_model()
         self.allocate_kv_cache()
         if not self.enforce_eager:
             self.capture_cudagraph()
-        torch.set_default_device("cpu")
-        torch.set_default_dtype(default_dtype)
 
         if self.world_size > 1:
             if rank == 0:
@@ -66,7 +63,7 @@ class ModelRunner:
             if method_name == "exit":
                 break
 
-    def read_shm(self):
+    def read_shm(self) -> tuple[str, tuple[Any, ...]]:
         assert self.world_size > 1 and self.rank
         self.event.wait()
         n = int.from_bytes(self.shm.buf[0:4], "little")
@@ -83,7 +80,7 @@ class ModelRunner:
         for event in self.event:
             event.set()
 
-    def call(self, method_name: str, *args):
+    def call(self, method_name: str, *args) -> tuple[Any, ...]:
         if self.world_size > 1 and self.rank == 0:
             self.write_shm(method_name, *args)
         method = getattr(self, method_name, None)
@@ -117,7 +114,7 @@ class ModelRunner:
                 module.v_cache = self.kv_cache[1, layer_id]
                 layer_id += 1
 
-    def prepare_block_tables(self, seqs: list[Sequence]):
+    def prepare_block_tables(self, seqs: list[Sequence]) -> torch.Tensor:
         max_len = max(len(seq.block_table) for seq in seqs)
         block_tables = [seq.block_table + [-1] * (max_len - len(seq.block_table)) for seq in seqs]
         block_tables = torch.tensor(block_tables, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
@@ -161,7 +158,7 @@ class ModelRunner:
         set_context(True, cu_seqlens_q, cu_seqlens_k, max_seqlen_q, max_seqlen_k, slot_mapping, None, block_tables)
         return input_ids, positions
 
-    def prepare_decode(self, seqs: list[Sequence]):
+    def prepare_decode(self, seqs: list[Sequence]) -> tuple[torch.Tensor, torch.Tensor]:
         input_ids = []
         positions = []
         slot_mapping = []
@@ -179,7 +176,7 @@ class ModelRunner:
         set_context(False, slot_mapping=slot_mapping, context_lens=context_lens, block_tables=block_tables)
         return input_ids, positions
 
-    def prepare_sample(self, seqs: list[Sequence]) -> list[torch.Tensor]:
+    def prepare_sample(self, seqs: list[Sequence]) -> torch.Tensor:
         temperatures = []
         for seq in seqs:
             temperatures.append(seq.temperature)
