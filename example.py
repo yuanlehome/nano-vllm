@@ -10,7 +10,7 @@ def main():
         model=model,
         max_model_len=8192,
         enforce_eager=False,
-        tensor_parallel_size=1,
+        tensor_parallel_size=2,
         kvcache_block_size=256, # must be divisible by 256
     )
 
