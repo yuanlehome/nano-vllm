@@ -17,20 +17,20 @@ class LLMEngine:
     def __init__(self, model: str, **kwargs):
         config_fields = {field.name for field in fields(Config)}
         config_kwargs = {k: v for k, v in kwargs.items() if k in config_fields}
-        config = Config(model, **config_kwargs)
+        self.config = Config(model, **config_kwargs)
         self.ps = []
         self.events = []
         ctx = mp.get_context("spawn")
-        for i in range(1, config.tensor_parallel_size):
+        for i in range(1, self.config.tensor_parallel_size):
             event = ctx.Event()
-            process = ctx.Process(target=ModelRunner, args=(config, i, event))
+            process = ctx.Process(target=ModelRunner, args=(self.config, i, event))
             process.start()
             self.ps.append(process)
             self.events.append(event)
-        self.model_runner = ModelRunner(config, 0, self.events)
-        self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
-        config.eos = self.tokenizer.eos_token_id
-        self.scheduler = Scheduler(config)
+        self.model_runner = ModelRunner(self.config, 0, self.events)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model, use_fast=True)
+        self.config.eos = self.tokenizer.eos_token_id
+        self.scheduler = Scheduler(self.config)
         atexit.register(self.exit)
 
     def exit(self):
@@ -42,10 +42,10 @@ class LLMEngine:
     def add_request(self, prompt: str | list[int], sampling_params: SamplingParams):
         if isinstance(prompt, str):
             prompt = self.tokenizer.encode(prompt)
-        seq = Sequence(prompt, sampling_params)
+        seq = Sequence(self.config, prompt, sampling_params)
         self.scheduler.add(seq)
 
-    def step(self):
+    def step(self) -> tuple[list[tuple[int, list[int]]], int]:
         seqs, is_prefill = self.scheduler.schedule()
         token_ids = self.model_runner.call("run", seqs, is_prefill)
         self.scheduler.postprocess(seqs, token_ids)
@@ -53,7 +53,7 @@ class LLMEngine:
         num_tokens = sum(len(seq) for seq in seqs) if is_prefill else -len(seqs)
         return outputs, num_tokens
 
-    def is_finished(self):
+    def is_finished(self) -> bool:
         return self.scheduler.is_finished()
 
     def generate(
@@ -66,6 +66,7 @@ class LLMEngine:
             pbar = tqdm(total=len(prompts), desc="Generating", dynamic_ncols=True)
         if not isinstance(sampling_params, list):
             sampling_params = [sampling_params] * len(prompts)
+        assert len(sampling_params) == len(prompts)
         for prompt, sp in zip(prompts, sampling_params):
             self.add_request(prompt, sp)
         outputs = {}

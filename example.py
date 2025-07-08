@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 
 
 def main():
-    model = "./models/Qwen3-0.6B/"
+    model = "/root/.cache/modelscope/hub/models/Qwen/Qwen3-0.6B/"
     tokenizer = AutoTokenizer.from_pretrained(model)
     llm = LLM(
         model=model,

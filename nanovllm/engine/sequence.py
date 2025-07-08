@@ -2,6 +2,7 @@ from copy import copy
 from enum import Enum, auto
 from itertools import count
 
+from nanovllm.config import Config
 from nanovllm.sampling_params import SamplingParams
 
 
@@ -12,11 +13,11 @@ class SequenceStatus(Enum):
 
 
 class Sequence:
-    block_size = 256
     counter = count()
 
-    def __init__(self, token_ids: list[int], sampling_params = SamplingParams()):
+    def __init__(self, config: Config, token_ids: list[int], sampling_params = SamplingParams()):
         self.seq_id = next(Sequence.counter)
+        self.block_size = config.kvcache_block_size
         self.status = SequenceStatus.WAITING
         self.token_ids = copy(token_ids)
         self.last_token = token_ids[-1]
@@ -28,41 +29,41 @@ class Sequence:
         self.max_tokens = sampling_params.max_tokens
         self.ignore_eos = sampling_params.ignore_eos
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.num_tokens
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> int:
         return self.token_ids[key]
 
     @property
-    def is_finished(self):
+    def is_finished(self) -> bool:
         return self.status == SequenceStatus.FINISHED
 
     @property
-    def num_completion_tokens(self):
+    def num_completion_tokens(self) -> bool:
         return self.num_tokens - self.num_prompt_tokens
 
     @property
-    def prompt_token_ids(self):
+    def prompt_token_ids(self) -> list[int]:
         return self.token_ids[:self.num_prompt_tokens]
 
     @property
-    def completion_token_ids(self):
+    def completion_token_ids(self) -> list[int]:
         return self.token_ids[self.num_prompt_tokens:]
 
     @property
-    def num_cached_blocks(self):
+    def num_cached_blocks(self) -> int:
         return self.num_cached_tokens // self.block_size
 
     @property
-    def num_blocks(self):
+    def num_blocks(self) -> int:
         return (self.num_tokens + self.block_size - 1) // self.block_size
 
     @property
-    def last_block_num_tokens(self):
+    def last_block_num_tokens(self) -> int:
         return self.num_tokens - (self.num_blocks - 1) * self.block_size
 
-    def block(self, i):
+    def block(self, i) -> list[int]:
         assert 0 <= i < self.num_blocks
         return self.token_ids[i*self.block_size: (i+1)*self.block_size]
 
@@ -71,11 +72,11 @@ class Sequence:
         self.last_token = token_id
         self.num_tokens += 1
 
-    def __getstate__(self):
+    def __getstate__(self) -> list[int]:
         return (self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.block_table,
                 self.token_ids if self.num_completion_tokens == 0 else self.last_token)
 
-    def __setstate__(self, state):
+    def __setstate__(self, state: list[int]):
         self.num_tokens, self.num_prompt_tokens, self.num_cached_tokens, self.block_table = state[:-1]
         if self.num_completion_tokens == 0:
             self.token_ids = state[-1]
