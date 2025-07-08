@@ -2,7 +2,6 @@ from copy import copy
 from enum import Enum, auto
 from itertools import count
 
-from nanovllm.config import Config
 from nanovllm.sampling_params import SamplingParams
 
 
@@ -14,10 +13,10 @@ class SequenceStatus(Enum):
 
 class Sequence:
     counter = count()
+    block_size = 256
 
-    def __init__(self, config: Config, token_ids: list[int], sampling_params = SamplingParams()):
+    def __init__(self, token_ids: list[int], sampling_params = SamplingParams()):
         self.seq_id = next(Sequence.counter)
-        self.block_size = config.kvcache_block_size
         self.status = SequenceStatus.WAITING
         self.token_ids = copy(token_ids)
         self.last_token = token_ids[-1]
