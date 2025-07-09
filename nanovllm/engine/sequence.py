@@ -84,7 +84,7 @@ class Sequence:
 
     def __repr__(self) -> str:
         return (
-            f"<Sequence id={self.seq_id}, status={self.status.name}, "
+            f"  <Sequence id={self.seq_id}, status={self.status.name}, "
             f"num_tokens={self.num_tokens}, num_prompt_tokens={self.num_prompt_tokens}, "
             f"num_completion_tokens={self.num_completion_tokens}, num_cached_tokens={self.num_cached_tokens}, "
             f"num_blocks={self.num_blocks}, num_cached_blocks={self.num_cached_blocks}, "

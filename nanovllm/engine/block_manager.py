@@ -25,8 +25,7 @@ class Block:
 
     def __repr__(self) -> str:
         return (
-            f"<Block id={self.block_id}, ref_count={self.ref_count}, hash={self.hash},\n"
-            f"  token_ids=[{', '.join(map(str, self.token_ids))}]>"
+            f"<Block id={self.block_id}, ref_count={self.ref_count}, hash={self.hash}, token_ids={self.token_ids}>"
         )
 
 
@@ -129,12 +128,14 @@ class BlockManager:
         lines.append(f"    Block size: {self.block_size}")
         lines.append(f"    Hash map size: {len(self.hash_to_block_id)}")
 
-        lines.append("    --- Used Blocks ---")
+        lines.append("    Used Blocks=[")
         for block_id in sorted(self.used_block_ids):
             lines.append(f"      {repr(self.blocks[block_id])}")  # 使用 Block 的 __repr__
+        lines.append("    ]")
 
-        lines.append("    --- Hash Map (Top 10) ---")
+        lines.append("    Hash Map(Top 10)=[")
         for h, bid in list(self.hash_to_block_id.items())[:10]:
             lines.append(f"      hash={h} -> block_id={bid}")
+        lines.append("    ]")
 
         return "\n".join(lines)

@@ -74,7 +74,7 @@ class Scheduler:
 
     def __repr__(self):
         return (
-            f"Scheduler(\n"
+            f"\nScheduler(\n"
             f"  max_num_seqs={self.max_num_seqs},\n"
             f"  max_num_batched_tokens={self.max_num_batched_tokens},\n"
             f"  eos={self.eos},\n"

@@ -48,9 +48,7 @@ class LLMEngine:
         self.scheduler.add(seq)
 
     def step(self) -> tuple[list[tuple[int, list[int]]], int]:
-        print(self.scheduler)
         seqs, is_prefill = self.scheduler.schedule()
-        print(self.scheduler)
         token_ids = self.model_runner.call("run", seqs, is_prefill)
         self.scheduler.postprocess(seqs, token_ids)
         outputs = [(seq.seq_id, seq.completion_token_ids) for seq in seqs if seq.is_finished]
@@ -58,6 +56,7 @@ class LLMEngine:
         return outputs, num_tokens
 
     def is_finished(self) -> bool:
+        print(self.scheduler)
         return self.scheduler.is_finished()
 
     def generate(

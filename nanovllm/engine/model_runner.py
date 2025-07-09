@@ -112,7 +112,7 @@ class ModelRunner:
         num_kvcache_blocks = torch.tensor(num_kvcache_blocks, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
         dist.all_reduce(num_kvcache_blocks, op=dist.ReduceOp.MIN)
         config.num_kvcache_blocks = num_kvcache_blocks.item()
-        assert config.num_kvcache_blocks > 0
+        assert config.num_kvcache_blocks > 0, f"num_kvcache_blocks={config.num_kvcache_blocks} < 0, Please check the device's memory usage."
         self.kv_cache = torch.zeros(2, hf_config.num_hidden_layers, config.num_kvcache_blocks, self.block_size, num_kv_heads, hf_config.head_dim)
         layer_id = 0
         for module in self.model.modules():

@@ -28,4 +28,4 @@ class Config:
 
     def __repr__(self) -> str:
         config = [f"{k}={getattr(self, k)}" for k in self.__dataclass_fields__]
-        return "<Config:\n  " + "\n  ".join(config) + "\n>"
+        return "\n<Config:\n  " + "\n  ".join(config) + "\n>"
