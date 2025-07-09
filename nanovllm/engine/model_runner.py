@@ -38,11 +38,15 @@ class ModelRunner:
 
         if self.world_size > 1:
             if rank == 0:
-                self.shm = SharedMemory(name="nanovllm", create=True, size=2**20)
+                try:
+                    self.shm = SharedMemory(name="nanovllm", create=True, size=2**20)
+                except FileExistsError:
+                    SharedMemory(name="nanovllm", create=False).unlink()
+                    self.shm = SharedMemory(name="nanovllm", create=True, size=2**20)
                 dist.barrier()
             else:
                 dist.barrier()
-                self.shm = SharedMemory(name="nanovllm")
+                self.shm = SharedMemory(name="nanovllm", create=False)
                 self.loop()
 
     def exit(self):
@@ -104,7 +108,10 @@ class ModelRunner:
         current = torch.cuda.memory_stats()["allocated_bytes.all.current"]
         num_kv_heads = hf_config.num_key_value_heads // self.world_size
         block_bytes = 2 * hf_config.num_hidden_layers * self.block_size * num_kv_heads * hf_config.head_dim * hf_config.torch_dtype.itemsize
-        config.num_kvcache_blocks = int(total * config.gpu_memory_utilization - used - (peak - current)) // block_bytes
+        num_kvcache_blocks = int(total * config.gpu_memory_utilization - used - (peak - current)) // block_bytes
+        num_kvcache_blocks = torch.tensor(num_kvcache_blocks, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
+        dist.all_reduce(num_kvcache_blocks, op=dist.ReduceOp.MIN)
+        config.num_kvcache_blocks = num_kvcache_blocks.item()
         assert config.num_kvcache_blocks > 0
         self.kv_cache = torch.zeros(2, hf_config.num_hidden_layers, config.num_kvcache_blocks, self.block_size, num_kv_heads, hf_config.head_dim)
         layer_id = 0
