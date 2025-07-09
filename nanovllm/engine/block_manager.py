@@ -23,6 +23,12 @@ class Block:
         self.hash = -1
         self.token_ids = []
 
+    def __repr__(self) -> str:
+        return (
+            f"<Block id={self.block_id}, ref_count={self.ref_count}, hash={self.hash},\n"
+            f"  token_ids=[{', '.join(map(str, self.token_ids))}]>"
+        )
+
 
 class BlockManager:
 
@@ -113,3 +119,22 @@ class BlockManager:
             self.hash_to_block_id[h] = last_block.block_id
         else:
             assert last_block.hash == -1
+
+    def __repr__(self) -> str:
+        lines = []
+        lines.append(f"    Total blocks: {len(self.blocks)}")
+        lines.append(f"    Used blocks: {len(self.used_block_ids)}")
+        lines.append(f"    Free blocks: {len(self.free_block_ids)}")
+        lines.append(f"    Usage rate: {len(self.used_block_ids) / len(self.blocks):.2%}")
+        lines.append(f"    Block size: {self.block_size}")
+        lines.append(f"    Hash map size: {len(self.hash_to_block_id)}")
+
+        lines.append("    --- Used Blocks ---")
+        for block_id in sorted(self.used_block_ids):
+            lines.append(f"      {repr(self.blocks[block_id])}")  # 使用 Block 的 __repr__
+
+        lines.append("    --- Hash Map (Top 10) ---")
+        for h, bid in list(self.hash_to_block_id.items())[:10]:
+            lines.append(f"      hash={h} -> block_id={bid}")
+
+        return "\n".join(lines)

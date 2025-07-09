@@ -71,3 +71,14 @@ class Scheduler:
                 seq.status = SequenceStatus.FINISHED
                 self.block_manager.deallocate(seq)
                 self.running.remove(seq)
+
+    def __repr__(self):
+        return (
+            f"Scheduler(\n"
+            f"  max_num_seqs={self.max_num_seqs},\n"
+            f"  max_num_batched_tokens={self.max_num_batched_tokens},\n"
+            f"  eos={self.eos},\n"
+            f"  block_manager:\n{repr(self.block_manager)},\n"
+            f"  waiting=[\n    " + ",\n    ".join(repr(seq) for seq in self.waiting) + "\n  ],\n"
+            "  running=[\n    " + ",\n    ".join(repr(seq) for seq in self.running) + "\n  ]\n)"
+        )

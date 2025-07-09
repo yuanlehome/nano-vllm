@@ -120,6 +120,7 @@ class ModelRunner:
                 module.k_cache = self.kv_cache[0, layer_id]
                 module.v_cache = self.kv_cache[1, layer_id]
                 layer_id += 1
+        assert layer_id == hf_config.num_hidden_layers
 
     def prepare_block_tables(self, seqs: list[Sequence]) -> torch.Tensor:
         max_len = max(len(seq.block_table) for seq in seqs)
@@ -155,7 +156,7 @@ class ModelRunner:
                 else:
                     end = start + seq.last_block_num_tokens
                 slot_mapping.extend(list(range(start, end)))
-        if cu_seqlens_k[-1] > cu_seqlens_q[-1]:    # prefix cache
+        if cu_seqlens_k[-1] > cu_seqlens_q[-1]: # prefix cache
             block_tables = self.prepare_block_tables(seqs)
         input_ids = torch.tensor(input_ids, dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
         positions = torch.tensor(positions, dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
@@ -193,7 +194,8 @@ class ModelRunner:
     @torch.inference_mode()
     def run_model(self, input_ids: torch.Tensor, positions: torch.Tensor, is_prefill: bool) -> torch.Tensor:
         if is_prefill or self.enforce_eager or input_ids.size(0) > 512:
-            return self.model.compute_logits(self.model(input_ids, positions))
+            hidden_states = self.model(input_ids, positions)
+            return self.model.compute_logits(hidden_states)
         else:
             bs = input_ids.size(0)
             context = get_context()

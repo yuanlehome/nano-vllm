@@ -32,6 +32,7 @@ class LLMEngine:
         self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
         config.eos = self.tokenizer.eos_token_id
         self.scheduler = Scheduler(config)
+        print(config)
         atexit.register(self.exit)
 
     def exit(self):
@@ -47,7 +48,9 @@ class LLMEngine:
         self.scheduler.add(seq)
 
     def step(self) -> tuple[list[tuple[int, list[int]]], int]:
+        print(self.scheduler)
         seqs, is_prefill = self.scheduler.schedule()
+        print(self.scheduler)
         token_ids = self.model_runner.call("run", seqs, is_prefill)
         self.scheduler.postprocess(seqs, token_ids)
         outputs = [(seq.seq_id, seq.completion_token_ids) for seq in seqs if seq.is_finished]
