@@ -25,6 +25,8 @@ class Sequence:
         self.num_cached_tokens = 0
         self.block_table = []
         self.temperature = sampling_params.temperature
+        self.top_p = sampling_params.top_p
+        self.top_k = sampling_params.top_k
         self.max_tokens = sampling_params.max_tokens
         self.ignore_eos = sampling_params.ignore_eos
 
@@ -89,6 +91,7 @@ class Sequence:
             f"num_completion_tokens={self.num_completion_tokens}, num_cached_tokens={self.num_cached_tokens}, "
             f"num_blocks={self.num_blocks}, num_cached_blocks={self.num_cached_blocks}, "
             f"last_block_num_tokens={self.last_block_num_tokens}, last_token={self.last_token}, "
-            f"ignore_eos={self.ignore_eos}, temperature={self.temperature:.2f}>, max_tokens={self.max_tokens}, "
+            f"ignore_eos={self.ignore_eos}, max_tokens={self.max_tokens}, "
             f"prompt_token_ids={self.prompt_token_ids}, completion_token_ids={self.completion_token_ids}"
+            f"top_p={self.top_p}, top_k={self.top_k}, temperature={self.temperature:.2f}>"
         )

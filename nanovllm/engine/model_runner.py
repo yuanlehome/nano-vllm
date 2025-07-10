@@ -8,7 +8,8 @@ import torch.distributed as dist
 
 from nanovllm.config import Config
 from nanovllm.engine.sequence import Sequence
-from nanovllm.layers.sampler import Sampler
+from nanovllm.sample.metadata import SamplingMetadata
+from nanovllm.sample.sampler import _SAMPLING_EPS, Sampler
 from nanovllm.utils.context import get_context, reset_context, set_context
 from nanovllm.utils.loader import get_model_from_loader
 
@@ -184,12 +185,28 @@ class ModelRunner:
         set_context(False, slot_mapping=slot_mapping, context_lens=context_lens, block_tables=block_tables)
         return input_ids, positions
 
-    def prepare_sample(self, seqs: list[Sequence]) -> torch.Tensor:
+    def prepare_sampling_metadata(self, seqs: list[Sequence]) -> SamplingMetadata:
+        all_greedy = True
         temperatures = []
+        top_ps = []
+        top_ks = []
         for seq in seqs:
+            if seq.temperature > _SAMPLING_EPS:
+                all_greedy = False
             temperatures.append(seq.temperature)
+            top_ps.append(seq.top_p)
+            top_ks.append(seq.top_k)
+
         temperatures = torch.tensor(temperatures, dtype=torch.float32, pin_memory=True).cuda(non_blocking=True)
-        return temperatures
+        top_ps = torch.tensor(top_ps, dtype=torch.float32, pin_memory=True).cuda(non_blocking=True)
+        top_ks = torch.tensor(top_ks, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
+        sampling_metadata = SamplingMetadata(
+            temperature=temperatures,
+            top_p=top_ps,
+            top_k=top_ks,
+            all_greedy=all_greedy,
+        )
+        return sampling_metadata
 
     @torch.inference_mode()
     def run_model(self, input_ids: torch.Tensor, positions: torch.Tensor, is_prefill: bool) -> torch.Tensor:
@@ -214,9 +231,9 @@ class ModelRunner:
 
     def run(self, seqs: list[Sequence], is_prefill: bool) -> list[int]:
         input_ids, positions = self.prepare_prefill(seqs) if is_prefill else self.prepare_decode(seqs)
-        temperatures = self.prepare_sample(seqs) if self.rank == 0 else None
+        sampling_metadata = self.prepare_sampling_metadata(seqs) if self.rank == 0 else None
         logits = self.run_model(input_ids, positions, is_prefill)
-        token_ids = self.sampler(logits, temperatures).tolist() if self.rank == 0 else None
+        token_ids = self.sampler(logits, sampling_metadata).tolist() if self.rank == 0 else None
         reset_context()
         return token_ids
 
