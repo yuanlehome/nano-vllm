@@ -40,32 +40,32 @@ class Qwen3Attention(nn.Module):
         self.scaling = self.head_dim**-0.5
 
         self.qkv_proj = QKVParallelLinear(
-            hidden_size,
-            self.head_dim,
-            self.total_num_heads,
-            self.total_num_kv_heads,
+            hidden_size=hidden_size,
+            head_size=self.head_dim,
+            total_num_heads=self.total_num_heads,
+            total_num_kv_heads=self.total_num_kv_heads,
             bias=qkv_bias,
         )
         self.o_proj = RowParallelLinear(
-            self.total_num_heads * self.head_dim,
-            hidden_size,
+            input_size=self.total_num_heads * self.head_dim,
+            output_size=hidden_size,
             bias=False,
         )
         self.rotary_emb = get_rope(
-            self.head_dim,
+            head_size=self.head_dim,
             rotary_dim=self.head_dim,
             max_position=max_position,
             base=rope_theta,
             rope_scaling=rope_scaling,
         )
         self.attn = Attention(
-            self.num_heads,
-            self.head_dim,
-            self.scaling,
-            self.num_kv_heads,
+            num_heads=self.num_heads,
+            head_dim=self.head_dim,
+            scale=self.scaling,
+            num_kv_heads=self.num_kv_heads,
         )
-        self.q_norm = RMSNorm(self.head_dim, eps=rms_norm_eps)
-        self.k_norm = RMSNorm(self.head_dim, eps=rms_norm_eps)
+        self.q_norm = RMSNorm(hidden_size=self.head_dim, eps=rms_norm_eps)
+        self.k_norm = RMSNorm(hidden_size=self.head_dim, eps=rms_norm_eps)
 
     def forward(
         self,
@@ -96,13 +96,13 @@ class Qwen3MLP(nn.Module):
     ) -> None:
         super().__init__()
         self.gate_up_proj = MergedColumnParallelLinear(
-            hidden_size,
-            [intermediate_size] * 2,
+            input_size=hidden_size,
+            output_sizes=[intermediate_size] * 2,
             bias=False,
         )
         self.down_proj = RowParallelLinear(
-            intermediate_size,
-            hidden_size,
+            input_size=intermediate_size,
+            output_size=hidden_size,
             bias=False,
         )
         assert hidden_act == "silu"
@@ -138,8 +138,8 @@ class Qwen3DecoderLayer(nn.Module):
             intermediate_size=config.intermediate_size,
             hidden_act=config.hidden_act,
         )
-        self.input_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.post_attention_layernorm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.input_layernorm = RMSNorm(hidden_size=config.hidden_size, eps=config.rms_norm_eps,)
+        self.post_attention_layernorm = RMSNorm(hidden_size=config.hidden_size, eps=config.rms_norm_eps,)
 
     def forward(
         self,
@@ -165,9 +165,9 @@ class Qwen3Model(nn.Module):
         config: Qwen3Config,
     ) -> None:
         super().__init__()
-        self.embed_tokens = VocabParallelEmbedding(config.vocab_size, config.hidden_size)
+        self.embed_tokens = VocabParallelEmbedding(num_embeddings=config.vocab_size, embedding_dim=config.hidden_size)
         self.layers = nn.ModuleList([Qwen3DecoderLayer(config) for _ in range(config.num_hidden_layers)])
-        self.norm = RMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.norm = RMSNorm(hidden_size=config.hidden_size, eps=config.rms_norm_eps)
 
     def forward(
         self,
@@ -197,7 +197,7 @@ class Qwen3ForCausalLM(nn.Module):
     ) -> None:
         super().__init__()
         self.model = Qwen3Model(config)
-        self.lm_head = ParallelLMHead(config.vocab_size, config.hidden_size)
+        self.lm_head = ParallelLMHead(num_embeddings=config.vocab_size, embedding_dim=config.hidden_size)
         if config.tie_word_embeddings:
             self.lm_head.weight.data = self.model.embed_tokens.weight.data
 
