@@ -6,6 +6,7 @@ import torch.multiprocessing as mp
 from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 
+from nanovllm import envs
 from nanovllm.config import Config
 from nanovllm.engine.model_runner import ModelRunner
 from nanovllm.engine.scheduler import Scheduler
@@ -32,7 +33,8 @@ class LLMEngine:
         self.tokenizer = AutoTokenizer.from_pretrained(config.model, use_fast=True)
         config.eos = self.tokenizer.eos_token_id
         self.scheduler = Scheduler(config)
-        print(config)
+        if envs.NANOVLLM_ENABLE_DEBUG:
+            print(config)
         atexit.register(self.exit)
 
     def exit(self):
@@ -56,7 +58,6 @@ class LLMEngine:
         return outputs, num_tokens
 
     def is_finished(self) -> bool:
-        print(self.scheduler)
         return self.scheduler.is_finished()
 
     def generate(
@@ -74,8 +75,12 @@ class LLMEngine:
             self.add_request(prompt, sp)
         outputs = {}
         prefill_throughput = decode_throughput = 0.
+        step = 0
         while not self.is_finished():
             t = perf_counter()
+            if envs.NANOVLLM_ENABLE_DEBUG:
+                print(f"\n{step=} \n {self.scheduler}")
+            step += 1
             output, num_tokens = self.step()
             if use_tqdm:
                 if num_tokens > 0:

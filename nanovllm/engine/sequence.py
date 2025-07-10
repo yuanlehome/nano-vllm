@@ -85,10 +85,10 @@ class Sequence:
     def __repr__(self) -> str:
         return (
             f"  <Sequence id={self.seq_id}, status={self.status.name}, "
-            f"num_tokens={self.num_tokens}, num_prompt_tokens={self.num_prompt_tokens}, "
+            f"num_tokens={self.num_tokens}, num_prompt_tokens={self.num_prompt_tokens}, block_table={self.block_table}, "
             f"num_completion_tokens={self.num_completion_tokens}, num_cached_tokens={self.num_cached_tokens}, "
             f"num_blocks={self.num_blocks}, num_cached_blocks={self.num_cached_blocks}, "
-            f"prompt_token_ids={self.prompt_token_ids}, completion_token_ids={self.completion_token_ids}, "
-            f"last_block_num_tokens={self.last_block_num_tokens}, last_token={self.last_token}, max_tokens={self.max_tokens}, "
-            f"ignore_eos={self.ignore_eos}, temperature={self.temperature:.2f}>"
+            f"last_block_num_tokens={self.last_block_num_tokens}, last_token={self.last_token}, "
+            f"ignore_eos={self.ignore_eos}, temperature={self.temperature:.2f}>, max_tokens={self.max_tokens}, "
+            f"prompt_token_ids={self.prompt_token_ids}, completion_token_ids={self.completion_token_ids}"
         )

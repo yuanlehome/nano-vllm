@@ -130,7 +130,7 @@ class BlockManager:
 
         lines.append("    Used Blocks=[")
         for block_id in sorted(self.used_block_ids):
-            lines.append(f"      {repr(self.blocks[block_id])}")  # 使用 Block 的 __repr__
+            lines.append(f"      {repr(self.blocks[block_id])}")
         lines.append("    ]")
 
         lines.append("    Hash Map(Top 10)=[")
