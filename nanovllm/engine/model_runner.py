@@ -34,6 +34,12 @@ class ModelRunner:
 
         self.warmup_model()
         self.allocate_kv_cache()
+
+        # CUDA Graph
+        self.max_capture_size = self.config.max_capture_size
+        self.graph_bs = list(range(1, self.max_capture_size + 1))
+        self.graphs = {}
+        self.graph_pool = None
         if not self.enforce_eager:
             self.capture_cudagraph()
 
@@ -210,7 +216,7 @@ class ModelRunner:
 
     @torch.inference_mode()
     def run_model(self, input_ids: torch.Tensor, positions: torch.Tensor, is_prefill: bool) -> torch.Tensor:
-        if is_prefill or self.enforce_eager or input_ids.size(0) > 512:
+        if is_prefill or self.enforce_eager or input_ids.size(0) > self.max_capture_size:
             hidden_states = self.model(input_ids, positions)
             return self.model.compute_logits(hidden_states)
         else:
@@ -241,17 +247,13 @@ class ModelRunner:
     def capture_cudagraph(self):
         config = self.config
         hf_config = config.hf_config
-        max_bs = min(self.config.max_num_seqs, 512)
         max_num_blocks = (config.max_model_len + self.block_size - 1) // self.block_size
-        input_ids = torch.zeros(max_bs, dtype=torch.int64)
-        positions = torch.zeros(max_bs, dtype=torch.int64)
-        slot_mapping = torch.zeros(max_bs, dtype=torch.int32)
-        context_lens = torch.zeros(max_bs, dtype=torch.int32)
-        block_tables = torch.zeros(max_bs, max_num_blocks, dtype=torch.int32)
-        outputs = torch.zeros(max_bs, hf_config.hidden_size)
-        self.graph_bs = [1, 2, 4, 8] + list(range(16, max_bs + 1, 16))
-        self.graphs = {}
-        self.graph_pool = None
+        input_ids = torch.zeros(self.max_capture_size, dtype=torch.int64)
+        positions = torch.zeros(self.max_capture_size, dtype=torch.int64)
+        slot_mapping = torch.zeros(self.max_capture_size, dtype=torch.int32)
+        context_lens = torch.zeros(self.max_capture_size, dtype=torch.int32)
+        block_tables = torch.zeros(self.max_capture_size, max_num_blocks, dtype=torch.int32)
+        outputs = torch.zeros(self.max_capture_size, hf_config.hidden_size)
 
         for bs in reversed(self.graph_bs):
             graph = torch.cuda.CUDAGraph()
