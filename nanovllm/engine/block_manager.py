@@ -24,9 +24,7 @@ class Block:
         self.token_ids = []
 
     def __repr__(self) -> str:
-        return (
-            f"<Block id={self.block_id}, ref_count={self.ref_count}, hash={self.hash}, token_ids={self.token_ids}>"
-        )
+        return f"<Block id={self.block_id}, ref_count={self.ref_count}, hash={self.hash}, token_ids={self.token_ids}>"
 
 
 class BlockManager:
@@ -69,7 +67,11 @@ class BlockManager:
         cache_miss = False
         for i in range(seq.num_blocks):
             token_ids = seq.block(i)
-            h = self.compute_hash(token_ids, h) if len(token_ids) == self.block_size else -1
+            h = (
+                self.compute_hash(token_ids, h)
+                if len(token_ids) == self.block_size
+                else -1
+            )
             block_id = self.hash_to_block_id.get(h, -1)
             if block_id == -1 or self.blocks[block_id].token_ids != token_ids:
                 cache_miss = True
@@ -111,7 +113,7 @@ class BlockManager:
             block_table.append(block_id)
         elif len(seq) % self.block_size == 0:
             assert last_block.hash == -1
-            token_ids = seq.block(seq.num_blocks-1)
+            token_ids = seq.block(seq.num_blocks - 1)
             prefix = self.blocks[block_table[-2]].hash if len(block_table) > 1 else -1
             h = self.compute_hash(token_ids, prefix)
             last_block.update(h, token_ids)
@@ -124,7 +126,9 @@ class BlockManager:
         lines.append(f"    Total blocks: {len(self.blocks)}")
         lines.append(f"    Used blocks: {len(self.used_block_ids)}")
         lines.append(f"    Free blocks: {len(self.free_block_ids)}")
-        lines.append(f"    Usage rate: {len(self.used_block_ids) / len(self.blocks):.2%}")
+        lines.append(
+            f"    Usage rate: {len(self.used_block_ids) / len(self.blocks):.2%}"
+        )
         lines.append(f"    Block size: {self.block_size}")
         lines.append(f"    Hash map size: {len(self.hash_to_block_id)}")
 

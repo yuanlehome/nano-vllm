@@ -6,8 +6,8 @@ from nanovllm.sample.metadata import SamplingMetadata
 
 _SAMPLING_EPS = 1e-5
 
-class Sampler(nn.Module):
 
+class Sampler(nn.Module):
 
     def __init__(self):
         super().__init__()
@@ -29,15 +29,17 @@ class Sampler(nn.Module):
         top_k: torch.Tensor,
         top_p: torch.Tensor,
     ) -> torch.Tensor:
-        """Sample from the logits using FlashInfer.
-        """
+        """Sample from the logits using FlashInfer."""
         # Both top-k and top-p.
         next_token_ids = top_k_top_p_sampling_from_logits(
-            logits, top_k, top_p, deterministic=True)
+            logits, top_k, top_p, deterministic=True
+        )
 
         return next_token_ids.view(-1)
 
-    def forward(self, logits: torch.Tensor, sampling_metadata: SamplingMetadata) -> torch.Tensor:
+    def forward(
+        self, logits: torch.Tensor, sampling_metadata: SamplingMetadata
+    ) -> torch.Tensor:
         logits = logits.to(torch.float)
         greedy_tokens = self.greedy_sample(logits)
         if sampling_metadata.all_greedy:
@@ -56,6 +58,6 @@ class Sampler(nn.Module):
             sampling_metadata.temperature < _SAMPLING_EPS,
             greedy_tokens,
             sample_tokens,
-            out=greedy_tokens, # Reuse tensor
+            out=greedy_tokens,  # Reuse tensor
         )
         return sampled

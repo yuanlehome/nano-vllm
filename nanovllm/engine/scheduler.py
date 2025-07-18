@@ -12,7 +12,9 @@ class Scheduler:
         self.max_num_seqs = config.max_num_seqs
         self.max_num_batched_tokens = config.max_num_batched_tokens
         self.eos = config.eos
-        self.block_manager = BlockManager(config.num_kvcache_blocks, config.kvcache_block_size)
+        self.block_manager = BlockManager(
+            config.num_kvcache_blocks, config.kvcache_block_size
+        )
         self.waiting: deque[Sequence] = deque()
         self.running: deque[Sequence] = deque()
 
@@ -29,7 +31,9 @@ class Scheduler:
         num_batched_tokens = 0
         while self.waiting and num_seqs < self.max_num_seqs:
             seq = self.waiting[0]
-            if num_batched_tokens + len(seq) > self.max_num_batched_tokens or not self.block_manager.can_allocate(seq):
+            if num_batched_tokens + len(
+                seq
+            ) > self.max_num_batched_tokens or not self.block_manager.can_allocate(seq):
                 break
             if envs.NANOVLLM_ENABLE_DEBUG:
                 print(f"\n[Prefill] before schedule for {seq=}, {self}")
@@ -77,7 +81,9 @@ class Scheduler:
             if envs.NANOVLLM_ENABLE_DEBUG:
                 print(f"\n[Postprocess] before for {seq=}, {self}")
             seq.append_token(token_id)
-            if (not seq.ignore_eos and token_id == self.eos) or seq.num_completion_tokens == seq.max_tokens:
+            if (
+                not seq.ignore_eos and token_id == self.eos
+            ) or seq.num_completion_tokens == seq.max_tokens:
                 seq.status = SequenceStatus.FINISHED
                 self.block_manager.deallocate(seq)
                 self.running.remove(seq)
@@ -91,6 +97,10 @@ class Scheduler:
             f"  max_num_batched_tokens={self.max_num_batched_tokens},\n"
             f"  eos={self.eos},\n"
             f"  block_manager:\n{repr(self.block_manager)},\n"
-            f"  waiting=[\n    " + ",\n    ".join(repr(seq) for seq in self.waiting) + "\n  ],\n"
-            "  running=[\n    " + ",\n    ".join(repr(seq) for seq in self.running) + "\n  ]\n)"
+            f"  waiting=[\n    "
+            + ",\n    ".join(repr(seq) for seq in self.waiting)
+            + "\n  ],\n"
+            "  running=[\n    "
+            + ",\n    ".join(repr(seq) for seq in self.running)
+            + "\n  ]\n)"
         )

@@ -3,8 +3,7 @@ from typing import Any, Callable
 
 environment_variables: dict[str, Callable[[], Any]] = {
     # Whether to print debug info.
-    "NANOVLLM_ENABLE_DEBUG":
-    lambda: bool(int(os.getenv("NANOVLLM_ENABLE_DEBUG", "0"))),
+    "NANOVLLM_ENABLE_DEBUG": lambda: bool(int(os.getenv("NANOVLLM_ENABLE_DEBUG", "0"))),
 }
 
 

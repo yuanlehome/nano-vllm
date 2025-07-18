@@ -5,6 +5,7 @@ class ModelRegistry:
     """
     Used to register and retrieve model classes.
     """
+
     _registry = {}
 
     @classmethod

@@ -11,7 +11,7 @@ from nanovllm.models import ModelRegistry
 
 
 def get_model_from_loader(config: Config) -> nn.Module:
-    """ load or download model """
+    """load or download model"""
     model_loader = DefaultModelLoader(config)
     model = model_loader.load_model()
     return model
@@ -22,24 +22,24 @@ def default_weight_loader(param: nn.Parameter, loaded_weight: torch.Tensor):
 
 
 class BaseModelLoader(ABC):
-    """ Base class for model loaders. """
+    """Base class for model loaders."""
 
     def __init__(self, config: Config):
         self.config = config
 
     @abstractmethod
     def download_model(self, config: Config):
-        """ Download a model so that it can be immediately loaded."""
+        """Download a model so that it can be immediately loaded."""
         raise NotImplementedError
 
     @abstractmethod
     def load_model(self) -> nn.Module:
-        """ Load a model with the given configurations."""
+        """Load a model with the given configurations."""
         raise NotImplementedError
 
 
 class DefaultModelLoader(BaseModelLoader):
-    """ ModelLoader that can load registered models """
+    """ModelLoader that can load registered models"""
 
     def __init__(self, config: Config):
         super().__init__(config)
@@ -65,7 +65,9 @@ class DefaultModelLoader(BaseModelLoader):
                             break
                     else:
                         param = model.get_parameter(weight_name)
-                        weight_loader = getattr(param, "weight_loader", default_weight_loader)
+                        weight_loader = getattr(
+                            param, "weight_loader", default_weight_loader
+                        )
                         weight_loader(param, f.get_tensor(weight_name))
 
         return model
